@@ -159,3 +159,29 @@ join film2 f on d.DIRECTOR_ID = f.DIRECTOR_ID;
 -- R1 = SELECT(FILM, nota >= 9 and data_aparitie >= 01/01/2000)
 -- R2 = PROJECT(DIRECTOR, nume)
 -- REZULTAT = R3 = JOIN(R1,R2)
+
+-- exista o subscriptie care sa contina toate filmele cu nota 10? Sa se afiseze DA sau NU corespunzator.
+select DISTINCT SUBSCRIPTIE_ID
+from SUBSCRIPTIE_FILM s1
+where not exists((select FILM_ID
+                  from FILM
+                  where NOTA = 10)
+            MINUS
+                (select f.FILM_ID
+                 from SUBSCRIPTIE_FILM s2, film f
+                 where f.FILM_ID = s2.FILM_ID
+                 and s2.SUBSCRIPTIE_ID = s1.SUBSCRIPTIE_ID));
+
+-- exista o subscriptie care sa contina toate filmele cu nota 10? Sa se afiseze DA sau NU corespunzator.
+select case when not exists(
+    (select FILM_ID
+    from FILM
+    where NOTA = 10)
+MINUS
+    (select f.FILM_ID
+     from SUBSCRIPTIE_FILM s2, film f
+     where f.FILM_ID = s2.FILM_ID))
+then 'DA'
+else 'NU'
+end Exista
+from dual;

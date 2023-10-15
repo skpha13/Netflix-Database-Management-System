@@ -158,7 +158,8 @@ minvalue 0
 maxvalue 10000
 nocycle;
 
-/*drop table ROL_JUCAT;
+/*
+drop table ROL_JUCAT;
 drop table LISTA_CARDURI;
 drop table SERIAL_ACTOR;
 drop table SUBSCRIPTIE_FILM;
@@ -177,7 +178,8 @@ drop sequence incrementare_rol_jucat;
 drop sequence INCREMENTARE_ACTOR;
 drop sequence INCREMENTARE_FILM;
 drop sequence incrementare_lista_carduri;
-drop sequence incrementare_serial;*/
+drop sequence incrementare_serial;
+*/
 
 commit;
 rollback;
