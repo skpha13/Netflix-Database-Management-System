@@ -114,37 +114,77 @@ insert all
 select 'worked' from dual;
 
 -- secventa nu merge cu insert all, da aceeasi valoare
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,1,78477);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,2,67933);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,2,78477);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,3,55245);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,3,39959);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,3,94030);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,3,67933);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,3,78477);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,4,67933);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,4,78477);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,5,94030);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,5,67933);
-insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,5,78477);
 
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,9,78477);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,8,67933);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,8,78477);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,3,55245);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,3,39959);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,3,94030);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,3,67933);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,3,78477);
+    -- SUBSCRIPTIE_SERIAL --
+
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,6,55245);
+
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,6,39959);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,5,39959);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,4,39959);
+
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,6,94030);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,5,94030);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,4,94030);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,3,94030);
+
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,6,67933);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,5,67933);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,4,67933);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,3,67933);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,2,67933);
+
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,6,78477);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,5,78477);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,4,78477);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,3,78477);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,2,78477);
+insert into SUBSCRIPTIE_SERIAL(subscriptie_serial_id, serial_id, subscriptie_id) VALUES (INCREMENTARE_SERIAL.nextval,1,78477);
+-- ==========================================================================================================================
+
+    -- SUBSCRIPTIE_FILM --
+
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,10,55245);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,9,55245);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,8,55245);
+
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,10,39959);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,9,39959);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,8,39959);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,7,39959);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,6,39959);
+
 insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,10,94030);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,7,55245);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,1,39959);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,2,67933);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,4,55245);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,5,55245);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,5,39959);
-insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,5,94030);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,9,94030);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,8,94030);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,7,94030);
 insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,6,94030);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,5,94030);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,4,94030);
+
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,10,67933);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,9,67933);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,8,67933);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,7,67933);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,6,67933);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,5,67933);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,4,67933);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,3,67933);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,2,67933);
+
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,10,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,9,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,8,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,7,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,6,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,5,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,4,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,3,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,2,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,1,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,11,78477);
+insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUES (INCREMENTARE_film.nextval,12,78477);
+-- =====================================================================================================================
 
 insert into SERIAL_ACTOR(serial_actor_id, serial_id, actor_id) VALUES (INCREMENTARE_ACTOR.nextval,1,10);
 insert into SERIAL_ACTOR(serial_actor_id, serial_id, actor_id) VALUES (INCREMENTARE_ACTOR.nextval,1,11);

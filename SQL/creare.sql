@@ -120,13 +120,14 @@ create table ROL_JUCAT (
     CONSTRAINT uk_film_actor_rol UNIQUE (film_id, actor_id, rol_id)
 );
 
+-- SEQUENCE --
+
 create sequence incrementare_serial
 start with 1
 increment by 1
 minvalue 0
 maxvalue 10000
 nocycle;
-
 
 create sequence incrementare_film
 start with 1
@@ -135,14 +136,12 @@ minvalue 0
 maxvalue 10000
 nocycle;
 
-
 create sequence incrementare_actor
 start with 1
 increment by 1
 minvalue 0
 maxvalue 10000
 nocycle;
-
 
 create sequence incrementare_rol_jucat
 start with 1
@@ -197,5 +196,4 @@ select 'DROP TABLE ' || table_name || ';'
 from user_tables;
 spool off;
 
--- TODO: change inserts to match new constraint between subscription and movie/series table
 -- TODO: change insert screenshots
