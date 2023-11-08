@@ -196,3 +196,6 @@ spool D:\"UNI CODE"\Univeristy-Work\"Second Year"\"First Semester"\DBMS\Project\
 select 'DROP TABLE ' || table_name || ';'
 from user_tables;
 spool off;
+
+-- TODO: change inserts to match new constraint between subscription and movie/series table
+-- TODO: change insert screenshots
