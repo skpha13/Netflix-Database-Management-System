@@ -1,3 +1,5 @@
+--      ====== EX6 ======
+
 -- pentru o subscriptie afisati toate filmele ei
 -- + toti actorii fiecarui film
 -- + toate rolurile fiecarui film
@@ -54,3 +56,55 @@ BEGIN
         end loop;
 END;
 /
+-- =================================================================
+
+--      ====== EX7 ======
+-- pentru fiecare Serial cu id-ul in (1,3,6) afisati numele tutor
+-- episoadelor care apartin
+declare
+    v_id_ser SERIAL.serial_id%type;
+    v_nume_ser SERIAL.denumire%type;
+    v_nume_episod varchar2(50);
+    v_areEpisod number(1) := 0;
+
+    -- cursor clasic
+    CURSOR seriale IS
+        select SERIAL_ID, DENUMIRE
+        from SERIAL
+        WHERE SERIAL_ID IN (1,3,6);
+
+    -- cursor parametrizat dependent de cel anterior
+    CURSOR episod(id number) IS
+        select DENUMIRE
+        from EPISOD
+        where SERIAL_ID = id;
+
+begin
+    OPEN seriale;
+    loop
+        Fetch seriale into v_id_ser, v_nume_ser;
+        exit when seriale%notfound;
+
+        v_areEpisod := 0;
+
+        DBMS_OUTPUT.PUT_LINE('Serialul: ' || v_nume_ser);
+
+        -- deschidem noul cursor cu parametrul din cursorul anterior
+        OPEN episod(v_id_ser);
+        loop
+            Fetch episod into v_nume_episod;
+            exit when EPISOD%notfound;
+            v_areEpisod := 1;
+            DBMS_OUTPUT.PUT_LINE('  ' || v_nume_episod);
+        end loop;
+
+        close episod;
+
+        if v_areEpisod = 0 then DBMS_OUTPUT.PUT_LINE('  Nu are episoade');
+        end if;
+
+    end loop;
+    close seriale;
+end;
+/
+-- =================================================================
