@@ -2,7 +2,6 @@
 
 -- pentru o subscriptie afisati toate filmele ei
 -- + toti actorii fiecarui film
--- + toate rolurile fiecarui film
 
 -- varray
 create or replace type actori as varray(20) of varchar2(50);
