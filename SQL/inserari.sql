@@ -246,4 +246,8 @@ insert into SUBSCRIPTIE_film(subscriptie_film_id, film_id, subscriptie_id) VALUE
 
 insert into ACTOR(actor_id, nume, prenume, data_nastere) VALUES (20, 'James', 'Bond', '13/02/2000');
 
+-- TODO: update inserts new episodes
 insert into SERIAL(serial_id, denumire, nota, data_aparitie) VALUES (6, 'Rick and Morty', 7.4, '12/11/2016');
+insert into EPISOD(episod_id, serial_id, denumire, numar, durata) VALUES (18,6,'Pilot',1,21);
+insert into EPISOD(episod_id, serial_id, denumire, numar, durata) VALUES (19,6,'Lawnmower Dog',2,19);
+insert into EPISOD(episod_id, serial_id, denumire, numar, durata) VALUES (20,6,'Anatomy Park',3,23);
