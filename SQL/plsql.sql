@@ -121,6 +121,7 @@ AS
     v_maxSerialDuration number(4) := 0;
     v_idSerialMaxDuration SERIAL.SERIAL_ID%type;
     v_countActors number(3) := 0;
+    v_foundActors boolean := false;
 
     CURSOR durataEpisoade(id_subscriptie SUBSCRIPTIE.SUBSCRIPTIE_ID%type) IS
         with durataEpisod as (select S2.SERIAL_ID, S2.DENUMIRE nume, sum(DURATA) suma
@@ -133,8 +134,17 @@ AS
         where ss.SUBSCRIPTIE_ID = v_subscriptie_id
         order by de.suma desc;
 
+    CURSOR actors IS
+        select sa.SERIAL_ID id, count(*) nr
+        from ACTOR a
+                 Join SERIAL_ACTOR sa on a.ACTOR_ID = sa.ACTOR_ID
+        group by sa.serial_id;
+
     type serial_info is table of durataEpisoade%rowtype index by pls_integer;
     v_infoSeriale serial_info;
+
+    type actors_info is table of actors%rowtype index by pls_integer;
+    v_infoActors actors_info;
 
     NAME_NOT_FOUND EXCEPTION;
     NO_ACTORS_FOUND EXCEPTION;
@@ -169,13 +179,20 @@ BEGIN
         end if;
     END LOOP;
 
-    select nr
-    into v_countActors
-    from (select sa.SERIAL_ID id, count(*) nr
-          from ACTOR a
-                   Join SERIAL_ACTOR sa on a.ACTOR_ID = sa.ACTOR_ID
-          group by sa.serial_id)
-    where id = 6; -- TODO: replace 6 with v_idSerialMaxDuration
+    OPEN actors;
+    FETCH actors bulk collect into v_infoActors;
+    CLOSE actors;
+
+    for i in v_infoActors.first..v_infoActors.last loop
+        if v_infoActors(i).id = v_idSerialMaxDuration then
+            v_foundActors := true;
+            v_countActors := v_infoActors(i).nr;
+        end if;
+        end loop;
+
+    if v_foundActors = false then
+        RAISE NO_ACTORS_FOUND;
+    end if;
 
     return v_countActors;
 
@@ -183,9 +200,14 @@ exception
     when NAME_NOT_FOUND then
         DBMS_OUTPUT.PUT_LINE('Nu exista tipul introdus');
         return -1;
+
+    when NO_ACTORS_FOUND then
+        DBMS_OUTPUT.PUT_LINE('Nu am gasit actori pentru datele cerute');
+        return -1;
 end;
 /
 
+-- Nu au fost gasiti actori
 declare
     v_tip_subscriptie SUBSCRIPTIE.TIP%TYPE := 'basic';
 begin
@@ -193,4 +215,19 @@ begin
 end;
 /
 
+-- Nu exista tipul introdus
+declare
+    v_tip_subscriptie SUBSCRIPTIE.TIP%TYPE := 'test';
+begin
+    DBMS_OUTPUT.PUT_LINE(durata_subscriptie(v_tip_subscriptie));
+end;
+/
+
+-- Funcitoneaza corect
+declare
+    v_tip_subscriptie SUBSCRIPTIE.TIP%TYPE := 'ultimate';
+begin
+    DBMS_OUTPUT.PUT_LINE(durata_subscriptie(v_tip_subscriptie));
+end;
+/
 -- =================================================================
