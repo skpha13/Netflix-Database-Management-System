@@ -123,6 +123,8 @@ AS
     v_countActors number(3) := 0;
     v_foundActors boolean := false;
 
+    -- cursor care ne ofera id-ul serialelor din subscriptia data ca parametru si duratat totala
+    -- aflata adunand durata fiecarui episod din acel serial
     CURSOR durataEpisoade(id_subscriptie SUBSCRIPTIE.SUBSCRIPTIE_ID%type) IS
         with durataEpisod as (select S2.SERIAL_ID, S2.DENUMIRE nume, sum(DURATA) suma
                               from EPISOD
@@ -134,6 +136,9 @@ AS
         where ss.SUBSCRIPTIE_ID = v_subscriptie_id
         order by de.suma desc;
 
+    -- cursor care ne da pentru fiecare serial cati actori are
+    -- TODO: intrebare, era mai bine sa fac cu left/right join si sa verific daca count ul e 0
+        -- sau e bine si asa?
     CURSOR actors IS
         select sa.SERIAL_ID id, count(*) nr
         from ACTOR a
@@ -146,9 +151,12 @@ AS
     type actors_info is table of actors%rowtype index by pls_integer;
     v_infoActors actors_info;
 
+    -- exceptii
     NAME_NOT_FOUND EXCEPTION;
     NO_ACTORS_FOUND EXCEPTION;
 BEGIN
+    -- selectarea tututor tipurilor si verificarea ca tipul dat ca parametru sa existe
+    -- in aceasta lista
     select lower(tip)
     bulk collect into v_tipuri_subscriptii
     from SUBSCRIPTIE;
@@ -162,16 +170,21 @@ BEGIN
     if v_hasBeenFound = false then
         RAISE NAME_NOT_FOUND;
     end if;
+    -- ========================
 
+    -- daca avem un tip corect ii aflam id-ul
     select SUBSCRIPTIE_ID
     into v_subscriptie_id
     from SUBSCRIPTIE
     where lower(TIP) = lower(tip_subscriptie);
+    -- ===============
 
+    -- colectam informatia pentru seriale, adica (id, durata totala)
     OPEN durataEpisoade(v_subscriptie_id);
     FETCH durataEpisoade bulk collect into v_infoSeriale;
     CLOSE durataEpisoade;
 
+    -- parcurgem serialele si luam id-ul celui cu cea mai mare durata
     FOR i IN v_infoSeriale.FIRST..v_infoSeriale.LAST LOOP
         if v_maxSerialDuration < v_infoSeriale(i).suma then
             v_maxSerialDuration := v_infoSeriale(i).suma;
@@ -179,10 +192,14 @@ BEGIN
         end if;
     END LOOP;
 
+    -- colectam informatia pentru actori
     OPEN actors;
     FETCH actors bulk collect into v_infoActors;
     CLOSE actors;
 
+    -- pentru fiecare serial vedem daca e egal cu cel aflat anterior
+    -- daca da ii dam actualizam countActors
+    -- TODO: intrebare, era mai bine sa fac cu left/right join si sa verific daca count ul e 0
     for i in v_infoActors.first..v_infoActors.last loop
         if v_infoActors(i).id = v_idSerialMaxDuration then
             v_foundActors := true;
@@ -223,7 +240,7 @@ begin
 end;
 /
 
--- Funcitoneaza corect
+-- Functioneaza corect
 declare
     v_tip_subscriptie SUBSCRIPTIE.TIP%TYPE := 'ultimate';
 begin
