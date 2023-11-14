@@ -248,3 +248,77 @@ begin
 end;
 /
 -- =================================================================
+
+--      ====== EX9 ======
+-- ni se da porcela unui utilizator, aflati toti actorii la care se poate uita
+CREATE OR REPLACE PROCEDURE actori_utilizator(porecla_utilizator UTILIZATOR.PORECLA%TYPE)
+AS
+    v_idUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE;
+    v_actorFound boolean := false;
+
+    CURSOR getActori(idUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE) IS
+        select NUME
+        from ACTOR
+        -- TODO: vezi joinuri daca le las asa sau clasice
+        FULL OUTER JOIN ROL_JUCAT on ACTOR.ACTOR_ID = ROL_JUCAT.ACTOR_ID
+        FULL OUTER JOIN FILM on ROL_JUCAT.FILM_ID = FILM.FILM_ID
+        FULL OUTER JOIN SUBSCRIPTIE_FILM on FILM.FILM_ID = SUBSCRIPTIE_FILM.FILM_ID
+        FULL OUTER JOIN SUBSCRIPTIE on SUBSCRIPTIE_FILM.SUBSCRIPTIE_ID = SUBSCRIPTIE.SUBSCRIPTIE_ID
+        JOIN UTILIZATOR on SUBSCRIPTIE.SUBSCRIPTIE_ID = UTILIZATOR.SUBSCRIPTIE_ID
+        WHERE UTILIZATOR_ID = idUtilizator;
+
+    NO_ACTORS_FOUND EXCEPTION;
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('UTILIZATORUL: ' || porecla_utilizator);
+
+    -- ia id-ul utilizatorului cu porecla data | TOO_MANY_ROWS/NO_DATA_FOUND
+    -- TODO: porecla care e la fel pentru 2 util/porecla care nu exista
+    select UTILIZATOR_ID
+    into v_idUtilizator
+    from UTILIZATOR
+    where lower(porecla_utilizator) = lower(porecla);
+
+    for i in getActori(v_idUtilizator) loop
+        v_actorFound := true;
+        DBMS_OUTPUT.PUT_LINE('  ' || i.NUME);
+        end loop;
+
+    if v_actorFound = false then RAISE NO_ACTORS_FOUND;
+    end if;
+exception
+    when TOO_MANY_ROWS then
+--         TODO: acctually do something here, dont just print
+        DBMS_OUTPUT.PUT_LINE('  Prea multi utilizatori cu aceeasi porecla');
+
+    when NO_DATA_FOUND then
+        DBMS_OUTPUT.PUT_LINE('  Nu au fost gasiti utilizatori cu porecla data');
+
+    when NO_ACTORS_FOUND then
+        DBMS_OUTPUT.PUT_LINE('  Acest utilizator nu se poate uita la niciun film cu actori');
+end;
+/
+
+-- TOO_MANY_ROWS
+begin
+    actori_utilizator('skpha');
+end;
+
+-- NO_DATA_FOUND
+begin
+    actori_utilizator('test');
+end;
+
+-- NO_ACTORS_FOUND
+declare
+    type porecle is table of UTILIZATOR.porecla%type index by pls_integer;
+    v_porecleUtilizatori porecle;
+begin
+    select porecla
+    bulk collect into v_porecleUtilizatori
+    from UTILIZATOR;
+    for i in v_porecleUtilizatori.first..v_porecleUtilizatori.last loop
+        actori_utilizator(v_porecleUtilizatori(i));
+        end loop;
+end;
+-- =================================================================
