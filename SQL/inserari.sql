@@ -252,4 +252,8 @@ insert into EPISOD(episod_id, serial_id, denumire, numar, durata) VALUES (18,6,'
 insert into EPISOD(episod_id, serial_id, denumire, numar, durata) VALUES (19,6,'Lawnmower Dog',2,19);
 insert into EPISOD(episod_id, serial_id, denumire, numar, durata) VALUES (20,6,'Anatomy Park',3,23);
 
+-- inserari pentru ex 9
 insert into UTILIZATOR(utilizator_id, subscriptie_id, porecla, mail, parola,data_exp_sub) values (111,78477,'skpha','skpha@gmail.com','VulturViteaz','15/06/2023');
+insert into FILM(film_id, director_id, denumire, nota, data_aparitie) VALUES (13,100006,'Talk with me',9,'28/07/2023');
+insert into SUBSCRIPTIE(subscriptie_id, tip, cost) VALUES (12345,'BASIC',0);
+insert into UTILIZATOR(utilizator_id, subscriptie_id, porecla, mail, parola,data_exp_sub) values (112,12345,'OnePiece','anime@gmail.com','animelover03','21/11/2023');

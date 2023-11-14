@@ -254,18 +254,20 @@ end;
 CREATE OR REPLACE PROCEDURE actori_utilizator(porecla_utilizator UTILIZATOR.PORECLA%TYPE)
 AS
     v_idUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE;
+    v_firstIdUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE;
     v_actorFound boolean := false;
 
+    -- distinct pentru ca un actor poate juca in mai multe filme
     CURSOR getActori(idUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE) IS
-        select NUME
-        from ACTOR
-        -- TODO: vezi joinuri daca le las asa sau clasice
-        FULL OUTER JOIN ROL_JUCAT on ACTOR.ACTOR_ID = ROL_JUCAT.ACTOR_ID
-        FULL OUTER JOIN FILM on ROL_JUCAT.FILM_ID = FILM.FILM_ID
-        FULL OUTER JOIN SUBSCRIPTIE_FILM on FILM.FILM_ID = SUBSCRIPTIE_FILM.FILM_ID
-        FULL OUTER JOIN SUBSCRIPTIE on SUBSCRIPTIE_FILM.SUBSCRIPTIE_ID = SUBSCRIPTIE.SUBSCRIPTIE_ID
-        JOIN UTILIZATOR on SUBSCRIPTIE.SUBSCRIPTIE_ID = UTILIZATOR.SUBSCRIPTIE_ID
-        WHERE UTILIZATOR_ID = idUtilizator;
+        select DISTINCT NUME
+        from ACTOR a
+        -- TODO: full outer joins ???
+        JOIN ROL_JUCAT rl on a.ACTOR_ID = rl.ACTOR_ID
+        JOIN FILM f on rl.FILM_ID = f.FILM_ID
+        JOIN SUBSCRIPTIE_FILM sf on f.FILM_ID = sf.FILM_ID
+        JOIN SUBSCRIPTIE s on sf.SUBSCRIPTIE_ID = s.SUBSCRIPTIE_ID
+        JOIN UTILIZATOR u on s.SUBSCRIPTIE_ID = u.SUBSCRIPTIE_ID
+        WHERE u.UTILIZATOR_ID = idUtilizator;
 
     NO_ACTORS_FOUND EXCEPTION;
 
@@ -273,24 +275,36 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('UTILIZATORUL: ' || porecla_utilizator);
 
     -- ia id-ul utilizatorului cu porecla data | TOO_MANY_ROWS/NO_DATA_FOUND
-    -- TODO: porecla care e la fel pentru 2 util/porecla care nu exista
-    select UTILIZATOR_ID
-    into v_idUtilizator
-    from UTILIZATOR
-    where lower(porecla_utilizator) = lower(porecla);
+        -- alt bloc in caz ca exista doi sau mai multi utilizatori cu aceeasi porecla
+        -- daca se intampla asta il luam pe primul
+    BEGIN
+        select UTILIZATOR_ID
+        into v_idUtilizator
+        from UTILIZATOR
+        where lower(porecla_utilizator) = lower(porecla);
+    EXCEPTION
+        when TOO_MANY_ROWS then
+            SELECT UTILIZATOR_ID
+            INTO v_firstIdUtilizator
+            FROM (
+                SELECT UTILIZATOR_ID
+                FROM UTILIZATOR
+                WHERE lower(porecla_utilizator) = lower(porecla)
+                AND ROWNUM = 1
+            );
+            v_idUtilizator := v_firstIdUtilizator;
+    end;
 
+    -- daca trecem de toate verificarile afisam toti actorii utilizatorului
     for i in getActori(v_idUtilizator) loop
         v_actorFound := true;
         DBMS_OUTPUT.PUT_LINE('  ' || i.NUME);
         end loop;
 
+    -- verificam daca am gasit actori in cursor
     if v_actorFound = false then RAISE NO_ACTORS_FOUND;
     end if;
 exception
-    when TOO_MANY_ROWS then
---         TODO: acctually do something here, dont just print
-        DBMS_OUTPUT.PUT_LINE('  Prea multi utilizatori cu aceeasi porecla');
-
     when NO_DATA_FOUND then
         DBMS_OUTPUT.PUT_LINE('  Nu au fost gasiti utilizatori cu porecla data');
 
@@ -314,11 +328,12 @@ declare
     type porecle is table of UTILIZATOR.porecla%type index by pls_integer;
     v_porecleUtilizatori porecle;
 begin
-    select porecla
+    /*select porecla
     bulk collect into v_porecleUtilizatori
     from UTILIZATOR;
     for i in v_porecleUtilizatori.first..v_porecleUtilizatori.last loop
         actori_utilizator(v_porecleUtilizatori(i));
-        end loop;
+        end loop;*/
+    actori_utilizator('OnePiece');
 end;
 -- =================================================================
