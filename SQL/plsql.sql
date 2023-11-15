@@ -407,6 +407,28 @@ delete from SUBSCRIPTIE where SUBSCRIPTIE_ID = 99999;
 --      ====== EX11 ======
 create or replace type subscriptii as varray(6) of number(6);
 
+-- tabela pentru a retine daca filmul a fost deja inserate de trigger
+create table film_trigger (
+    film_id number(6)
+);
+
+-- functie ajutatoare pentru a verifica daca un film se afla in film_trigger
+CREATE OR REPLACE FUNCTION verificaFilm(v_filmId FILM.FILM_ID%TYPE) return boolean AS
+    v_count number(2) := 0;
+BEGIN
+    select count(*)
+    into v_count
+    from film_trigger
+    where film_id = v_filmId;
+
+    if v_count > 0 then
+        return TRUE;
+    end if;
+
+    return false;
+END;
+/
+
 CREATE OR REPLACE TRIGGER inserare_filme
     BEFORE INSERT
     ON SUBSCRIPTIE_FILM
@@ -422,33 +444,36 @@ BEGIN
     from SUBSCRIPTIE
     order by COST;
 
-    for i in v_tipuriSubscriptii.first..v_tipuriSubscriptii.last loop
-        DBMS_OUTPUT.PUT_LINE(v_tipuriSubscriptii(i));
-        end loop;
-
     -- TODO: inserand in subscriptie film in trigger declansam iar trigger ul
         -- idei:
             -- coloana aditionala in SF sa vedem daca am inserat
             -- tabela aditionala cu id uri de filme care au fost deja inserate
 
     -- parcurgem toate subscriptiile
-    for i in v_tipuriSubscriptii.first..v_tipuriSubscriptii.last loop
-        -- daca anterior gasisem subscriptia inserata atunci o inseram si in restul
-        if v_subscriptieCurenta = true then
-            insert into SUBSCRIPTIE_FILM(subscriptie_film_id, film_id, subscriptie_id)
-                    values (INCREMENTARE_film.nextval, :NEW.FILM_ID, v_tipuriSubscriptii(i));
-        end if;
+    if VERIFICAFILM(:NEW.FILM_ID) = false then
+        insert into film_trigger(film_id) values (:NEW.FILM_ID);
 
-        if :NEW.SUBSCRIPTIE_ID = v_tipuriSubscriptii(i) then
-            v_subscriptieCurenta := true;
-        end if;
-        end loop;
+        for i in v_tipuriSubscriptii.first..v_tipuriSubscriptii.last loop
+            -- daca anterior gasisem subscriptia inserata atunci o inseram si in restul
+            if v_subscriptieCurenta = true then
+                insert into SUBSCRIPTIE_FILM(subscriptie_film_id, film_id, subscriptie_id)
+                        values (INCREMENTARE_film.nextval, :NEW.FILM_ID, v_tipuriSubscriptii(i));
+            end if;
+
+            if :NEW.SUBSCRIPTIE_ID = v_tipuriSubscriptii(i) then
+                v_subscriptieCurenta := true;
+            end if;
+            end loop;
+
+    end if;
 end;
 /
 
-select FILM_ID
+select SUBSCRIPTIE_ID
 from SUBSCRIPTIE_FILM
 where FILM_ID = 999;
+
+delete from SUBSCRIPTIE_FILM where FILM_ID = 999;
 
 insert into SUBSCRIPTIE_FILM(subscriptie_film_id, film_id, subscriptie_id) values (INCREMENTARE_FILM.nextval,999,55245);
 drop trigger inserare_filme;
@@ -810,4 +835,3 @@ begin
 end;
 /
 -- =================================================================
-
