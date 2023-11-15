@@ -5,7 +5,9 @@
 
 -- varray
 create or replace type actori as varray(20) of varchar2(50);
-DECLARE
+
+CREATE OR REPLACE PROCEDURE filme_din_subscriptie(v_nume_subscriptie SUBSCRIPTIE.TIP%TYPE)
+AS
     -- tablou indexat care retine numele filmelor
     type filme is table of FILM.denumire%type index by pls_integer;
     v_filme filme;
@@ -17,7 +19,6 @@ DECLARE
     -- varray care contine numele actorilor
     v_actori actori;
 
-    v_nume_subscriptie SUBSCRIPTIE.tip%type := 'basic';
     v_subscriptie_id SUBSCRIPTIE.subscriptie_id%type;
 
 BEGIN
@@ -55,13 +56,38 @@ BEGIN
         end loop;
 END;
 /
+
+begin
+    filme_din_subscriptie('basic');
+end;
+/
+
 -- =================================================================
 
 --      ====== EX7 ======
--- pentru fiecare Serial cu id-ul in (1,3,6) afisati numele tutor
+-- pentru fiecare Serial cu id-ul in (1,3,6) afisati numele tuturor
 -- episoadelor care apartin
-declare
+create or replace type serialId as varray(10) of number(6);
+
+-- functie ajutatoare pentru a verifica daca un serial apartine unui varray de seriale
+-- am facut asta ca primeam o eroare ciudata si asta mi s-a parut un workaound desutl de bun
+create or replace function verifica_serial(v_serialId SERIAL.SERIAL_ID%TYPE, listaId serialId) RETURN NUMBER AS
+    v_found number(1) := 0;
+begin
+    for i in 1..listaId.COUNT loop
+        if v_serialId = listaId(i) then
+            v_found := 1;
+            return v_found;
+        end if;
+    end loop;
+
+    return v_found;
+end;
+/
+
+CREATE OR REPLACE PROCEDURE episoade_din_seriale(listaId serialId) AS
     v_id_ser SERIAL.serial_id%type;
+
     v_nume_ser SERIAL.denumire%type;
     v_nume_episod varchar2(50);
     v_areEpisod number(1) := 0;
@@ -70,7 +96,7 @@ declare
     CURSOR seriale IS
         select SERIAL_ID, DENUMIRE
         from SERIAL
-        WHERE SERIAL_ID IN (1,3,6);
+        WHERE verifica_serial(SERIAL_ID, listaId) = 1;
 
     -- cursor parametrizat dependent de cel anterior
     CURSOR episod(id number) IS
@@ -104,6 +130,13 @@ begin
 
     end loop;
     close seriale;
+end;
+/
+
+declare
+    v_lista_serialId serialId := serialId(1,3,6);
+begin
+    episoade_din_seriale(v_lista_serialId);
 end;
 /
 -- =================================================================
@@ -446,4 +479,10 @@ drop table test;
 select * from audit_tabele;
 
 drop trigger trigger_audit;
+-- =================================================================
+
+--      ====== EX13 ======
+    -- TODO: make ex6 and 7 procedures
+-- CREATE OR REPLACE PACKAGE pachet_filme AS
+
 -- =================================================================
