@@ -20,9 +20,6 @@ AS
     v_actori actori;
 
     v_subscriptie_id SUBSCRIPTIE.subscriptie_id%type;
-
-    v_foundActor boolean := false;
-
 BEGIN
     -- obtine id-ul subscriptiei
     select unique SUBSCRIPTIE_ID
@@ -43,24 +40,20 @@ BEGIN
         DBMS_OUTPUT.PUT_LINE('  ' || v_filme(i) || ': ');
 
         -- pentru fiecare film selectam actorii care joaca in el
-        -- TODO: pentru ultimate nu merge se opreste la Top Gun Maverick
-            -- exceptie numerica sau de valoare la 52-57
-        -- TODO: after fix, repara si in package
         select nume
         bulk collect into v_actori
         from ACTOR
         join ROL_JUCAT on ACTOR.ACTOR_ID = ROL_JUCAT.ACTOR_ID
         where ROL_JUCAT.FILM_ID = v_filme_id(i);
 
-        for j in v_actori.first..v_actori.last loop
-            DBMS_OUTPUT.PUT_LINE(v_actori(j));
-            v_foundActor := true;
+        if v_actori.COUNT > 0 then
+            for j in v_actori.first..v_actori.last loop
+                DBMS_OUTPUT.PUT_LINE(v_actori(j));
             end loop;
 
-        if v_foundActor = false then
-            DBMS_OUTPUT.PUT_LINE('Nu are actori');
-        else
             v_actori.DELETE;
+        else
+            DBMS_OUTPUT.PUT_LINE('Nu are actori');
         end if;
 
         end loop;
@@ -546,11 +539,15 @@ CREATE OR REPLACE PACKAGE BODY pachet_netflix AS
             join ROL_JUCAT on ACTOR.ACTOR_ID = ROL_JUCAT.ACTOR_ID
             where ROL_JUCAT.FILM_ID = v_filme_id(i);
 
-            for i in v_actori.first..v_actori.last loop
-                DBMS_OUTPUT.PUT_LINE(v_actori(i));
+            if v_actori.COUNT > 0 then
+                for j in v_actori.first..v_actori.last loop
+                    DBMS_OUTPUT.PUT_LINE(v_actori(j));
                 end loop;
 
-            v_actori.DELETE;
+                v_actori.DELETE;
+            else
+                DBMS_OUTPUT.PUT_LINE('Nu are actori');
+            end if;
 
             end loop;
     END filme_din_subscriptie;
