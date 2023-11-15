@@ -391,6 +391,9 @@ BEGIN
         end loop;
 
     -- TODO: inserand in subscriptie film in trigger declansam iar trigger ul
+        -- idei:
+            -- coloana aditionala in SF sa vedem daca am inserat
+            -- tabela aditionala cu id uri de filme care au fost deja inserate
 
     -- parcurgem toate subscriptiile
     for i in v_tipuriSubscriptii.first..v_tipuriSubscriptii.last loop
@@ -415,6 +418,32 @@ insert into SUBSCRIPTIE_FILM(subscriptie_film_id, film_id, subscriptie_id) value
 drop trigger inserare_filme;
 -- =================================================================
 
---      ====== EX11 ======
+--      ====== EX12 ======
+create table audit_tabele (
+    utilizator varchar2(30),
+    nume_bazadate varchar2(50),
+    eveniment varchar2(20),
+    nume_obiect varchar2(30),
+    data date
+);
 
+CREATE OR REPLACE TRIGGER trigger_audit
+    after create or drop or alter on schema
+BEGIN
+    insert into audit_tabele values (
+                                     sys.LOGIN_USER(),
+                                     sys.DATABASE_NAME(),
+                                     sys.SYSEVENT(),
+                                     sys.DICTIONARY_OBJ_NAME(),
+                                     sysdate
+                                    );
+end;
+/
+
+create table test (tip varchar2(20));
+drop table test;
+
+select * from audit_tabele;
+
+drop trigger trigger_audit;
 -- =================================================================
