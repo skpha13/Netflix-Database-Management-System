@@ -656,6 +656,7 @@ CREATE OR REPLACE PACKAGE BODY pachet_netflix AS
 
         -- cursor care ne ofera id-ul serialelor din subscriptia data ca parametru si duratat totala
         -- aflata adunand durata fiecarui episod din acel serial
+        -- TODO: sa fac acest bloc select intr unul singur cu 2 join uri, nu 2 fiecare
         CURSOR durataEpisoade(id_subscriptie SUBSCRIPTIE.SUBSCRIPTIE_ID%type) IS
             with durataEpisod as (select S2.SERIAL_ID, S2.DENUMIRE nume, sum(DURATA) suma
                                   from EPISOD
@@ -835,3 +836,5 @@ begin
 end;
 /
 -- =================================================================
+
+-- TODO: documentatie
