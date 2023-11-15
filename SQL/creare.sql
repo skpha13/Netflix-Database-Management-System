@@ -75,7 +75,7 @@ create table FILM (
     constraint fk_director foreign key (director_id) references DIRECTOR(director_id)
 );
 
-create table  SUBSCRIPTIE_FILM (
+create table SUBSCRIPTIE_FILM (
     subscriptie_film_id number(6) constraint pk_sub_film primary key ,
     film_id number(6) not null ,
     subscriptie_id number(6) not null ,
@@ -182,18 +182,5 @@ drop sequence incrementare_serial;
 
 commit;
 rollback;
-
-/*
-select constraint_name, constraint_type, TABLE_NAME
-from SYS.USER_CONSTRAINTS
-where lower(table_name) = 'utilizator';*/
-
-select *
-from user_tables;
-
-spool D:\"UNI CODE"\Univeristy-Work\"Second Year"\"First Semester"\DBMS\Project\SpoolOutput\insert.sql
-select 'DROP TABLE ' || table_name || ';'
-from user_tables;
-spool off;
 
 -- TODO: change insert screenshots

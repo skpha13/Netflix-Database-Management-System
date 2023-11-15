@@ -337,3 +337,84 @@ begin
     actori_utilizator('OnePiece');
 end;
 -- =================================================================
+
+--      ====== EX10 ======
+-- Trigger care sa nu ne lase sa inseram mai multe decat 6
+CREATE OR REPLACE TRIGGER nr_maxim_subscriptii
+    BEFORE INSERT ON SUBSCRIPTIE
+DECLARE
+    v_nrSubscriptii number(2);
+BEGIN
+    -- punem numarul subscriptiilor in variabila
+    select count(*)
+    into v_nrSubscriptii
+    from SUBSCRIPTIE;
+
+    -- daca sunt sase deja, aruncam eroarea
+    if v_nrSubscriptii >= 6 then
+        RAISE_APPLICATION_ERROR(-20001,'Numarul maxim de subscriptii a fost atins');
+    end if;
+end;
+/
+
+begin
+    insert into SUBSCRIPTIE(subscriptie_id, tip, cost) values (99999,'BaSiC',99);
+end;
+/
+
+drop trigger nr_maxim_subscriptii;
+select count(*) from SUBSCRIPTIE;
+delete from SUBSCRIPTIE where SUBSCRIPTIE_ID = 99999;
+-- =================================================================
+
+--      ====== EX11 ======
+-- TODO: poate fac si pentru seriale, si pentru delete
+create or replace type subscriptii as varray(6) of number(6);
+
+CREATE OR REPLACE TRIGGER inserare_filme
+    BEFORE INSERT
+    ON SUBSCRIPTIE_FILM
+    FOR EACH ROW
+DECLARE
+    v_tipuriSubscriptii subscriptii;
+    v_subscriptieCurenta boolean := false;
+BEGIN
+    -- obtinem id-urile subscriptiilor in functie de cost
+    -- asta pentru a le avea in ordinea ierarhica corecta
+    select SUBSCRIPTIE_ID
+    bulk collect into v_tipuriSubscriptii
+    from SUBSCRIPTIE
+    order by COST;
+
+    for i in v_tipuriSubscriptii.first..v_tipuriSubscriptii.last loop
+        DBMS_OUTPUT.PUT_LINE(v_tipuriSubscriptii(i));
+        end loop;
+
+    -- TODO: inserand in subscriptie film in trigger declansam iar trigger ul
+
+    -- parcurgem toate subscriptiile
+    for i in v_tipuriSubscriptii.first..v_tipuriSubscriptii.last loop
+        -- daca anterior gasisem subscriptia inserata atunci o inseram si in restul
+        if v_subscriptieCurenta = true then
+            insert into SUBSCRIPTIE_FILM(subscriptie_film_id, film_id, subscriptie_id)
+                    values (INCREMENTARE_film.nextval, :NEW.FILM_ID, v_tipuriSubscriptii(i));
+        end if;
+
+        if :NEW.SUBSCRIPTIE_ID = v_tipuriSubscriptii(i) then
+            v_subscriptieCurenta := true;
+        end if;
+        end loop;
+end;
+/
+
+select FILM_ID
+from SUBSCRIPTIE_FILM
+where FILM_ID = 999;
+
+insert into SUBSCRIPTIE_FILM(subscriptie_film_id, film_id, subscriptie_id) values (INCREMENTARE_FILM.nextval,999,55245);
+drop trigger inserare_filme;
+-- =================================================================
+
+--      ====== EX11 ======
+
+-- =================================================================
