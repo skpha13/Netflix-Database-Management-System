@@ -21,6 +21,8 @@ AS
 
     v_subscriptie_id SUBSCRIPTIE.subscriptie_id%type;
 
+    v_foundActor boolean := false;
+
 BEGIN
     -- obtine id-ul subscriptiei
     select unique SUBSCRIPTIE_ID
@@ -41,24 +43,32 @@ BEGIN
         DBMS_OUTPUT.PUT_LINE('  ' || v_filme(i) || ': ');
 
         -- pentru fiecare film selectam actorii care joaca in el
+        -- TODO: pentru ultimate nu merge se opreste la Top Gun Maverick
+            -- exceptie numerica sau de valoare la 52-57
+        -- TODO: after fix, repara si in package
         select nume
         bulk collect into v_actori
         from ACTOR
         join ROL_JUCAT on ACTOR.ACTOR_ID = ROL_JUCAT.ACTOR_ID
         where ROL_JUCAT.FILM_ID = v_filme_id(i);
 
-        for i in v_actori.first..v_actori.last loop
-            DBMS_OUTPUT.PUT_LINE(v_actori(i));
+        for j in v_actori.first..v_actori.last loop
+            DBMS_OUTPUT.PUT_LINE(v_actori(j));
+            v_foundActor := true;
             end loop;
 
-        v_actori.DELETE;
+        if v_foundActor = false then
+            DBMS_OUTPUT.PUT_LINE('Nu are actori');
+        else
+            v_actori.DELETE;
+        end if;
 
         end loop;
 END;
 /
 
 begin
-    filme_din_subscriptie('basic');
+    filme_din_subscriptie('ultimate');
 end;
 /
 
@@ -401,7 +411,6 @@ delete from SUBSCRIPTIE where SUBSCRIPTIE_ID = 99999;
 -- =================================================================
 
 --      ====== EX11 ======
--- TODO: poate fac si pentru seriale, si pentru delete
 create or replace type subscriptii as varray(6) of number(6);
 
 CREATE OR REPLACE TRIGGER inserare_filme
@@ -464,12 +473,12 @@ CREATE OR REPLACE TRIGGER trigger_audit
     after create or drop or alter on schema
 BEGIN
     insert into audit_tabele values (
-                                     sys.LOGIN_USER(),
-                                     sys.DATABASE_NAME(),
-                                     sys.SYSEVENT(),
-                                     sys.DICTIONARY_OBJ_NAME(),
-                                     sysdate
-                                    );
+        sys.LOGIN_USER(),
+        sys.DATABASE_NAME(),
+        sys.SYSEVENT(),
+        sys.DICTIONARY_OBJ_NAME(),
+        sysdate
+    );
 end;
 /
 
@@ -482,7 +491,217 @@ drop trigger trigger_audit;
 -- =================================================================
 
 --      ====== EX13 ======
-    -- TODO: make ex6 and 7 procedures
--- CREATE OR REPLACE PACKAGE pachet_filme AS
+CREATE OR REPLACE PACKAGE pachet_netflix AS
+    -- 6
+    PROCEDURE filme_din_subscriptie(v_nume_subscriptie SUBSCRIPTIE.TIP%TYPE);
+    -- 7 functie ajutatoare + procedura
+    FUNCTION verifica_serial(v_serialId SERIAL.SERIAL_ID%TYPE, listaId serialId) RETURN NUMBER;
+    PROCEDURE episoade_din_seriale(listaId serialId);
+    -- 8
+--     FUNCTION durata_subscriptie(tip_subscriptie subscriptie.tip%type) RETURN NUMBER;
+    -- 9
+    PROCEDURE actori_utilizator(porecla_utilizator UTILIZATOR.PORECLA%TYPE);
+END pachet_netflix;
 
+CREATE OR REPLACE PACKAGE BODY pachet_netflix AS
+    -- ===== 6 =====
+    PROCEDURE filme_din_subscriptie(v_nume_subscriptie SUBSCRIPTIE.TIP%TYPE)
+    AS
+        -- tablou indexat care retine numele filmelor
+        type filme is table of FILM.denumire%type index by pls_integer;
+        v_filme filme;
+
+        -- tablou imbricat care retine id-ul filmelor
+        type filme_id is table of ACTOR.nume%type;
+        v_filme_id filme_id;
+
+        -- varray care contine numele actorilor
+        v_actori actori;
+
+        v_subscriptie_id SUBSCRIPTIE.subscriptie_id%type;
+
+    BEGIN
+        -- obtine id-ul subscriptiei
+        select unique SUBSCRIPTIE_ID
+        into v_subscriptie_id
+        from SUBSCRIPTIE
+        where TIP = v_nume_subscriptie;
+
+        -- obtin toate numele filmelor si id-urile lor in tabloul indexat v_filme/v_filme_id
+        select DENUMIRE, FILM.FILM_ID
+        bulk collect into v_filme, v_filme_id
+        from FILM
+        join SUBSCRIPTIE_FILM on FILM.FILM_ID = SUBSCRIPTIE_FILM.FILM_ID
+        where SUBSCRIPTIE_FILM.SUBSCRIPTIE_ID = v_subscriptie_id;
+
+        DBMS_OUTPUT.PUT_LINE('      Subscriptia ' || v_nume_subscriptie || ' contine:');
+
+        for i in v_filme_id.first..v_filme_id.last loop
+            DBMS_OUTPUT.PUT_LINE('  ' || v_filme(i) || ': ');
+
+            -- pentru fiecare film selectam actorii care joaca in el
+            select nume
+            bulk collect into v_actori
+            from ACTOR
+            join ROL_JUCAT on ACTOR.ACTOR_ID = ROL_JUCAT.ACTOR_ID
+            where ROL_JUCAT.FILM_ID = v_filme_id(i);
+
+            for i in v_actori.first..v_actori.last loop
+                DBMS_OUTPUT.PUT_LINE(v_actori(i));
+                end loop;
+
+            v_actori.DELETE;
+
+            end loop;
+    END filme_din_subscriptie;
+    -- =============
+
+    -- ===== 7 =====
+    function verifica_serial(v_serialId SERIAL.SERIAL_ID%TYPE, listaId serialId) RETURN NUMBER AS
+        v_found number(1) := 0;
+    begin
+        for i in 1..listaId.COUNT loop
+            if v_serialId = listaId(i) then
+                v_found := 1;
+                return v_found;
+            end if;
+        end loop;
+
+        return v_found;
+    end verifica_serial;
+
+    PROCEDURE episoade_din_seriale(listaId serialId) AS
+        v_id_ser SERIAL.serial_id%type;
+
+        v_nume_ser SERIAL.denumire%type;
+        v_nume_episod varchar2(50);
+        v_areEpisod number(1) := 0;
+
+        -- cursor clasic
+        CURSOR seriale IS
+            select SERIAL_ID, DENUMIRE
+            from SERIAL
+            WHERE verifica_serial(SERIAL_ID, listaId) = 1;
+
+        -- cursor parametrizat dependent de cel anterior
+        CURSOR episod(id number) IS
+            select DENUMIRE
+            from EPISOD
+            where SERIAL_ID = id;
+
+    begin
+        OPEN seriale;
+        loop
+            Fetch seriale into v_id_ser, v_nume_ser;
+            exit when seriale%notfound;
+
+            v_areEpisod := 0;
+
+            DBMS_OUTPUT.PUT_LINE('Serialul: ' || v_nume_ser);
+
+            -- deschidem noul cursor cu parametrul din cursorul anterior
+            OPEN episod(v_id_ser);
+            loop
+                Fetch episod into v_nume_episod;
+                exit when EPISOD%notfound;
+                v_areEpisod := 1;
+                DBMS_OUTPUT.PUT_LINE('  ' || v_nume_episod);
+            end loop;
+
+            close episod;
+
+            if v_areEpisod = 0 then DBMS_OUTPUT.PUT_LINE('  Nu are episoade');
+            end if;
+
+        end loop;
+        close seriale;
+    end episoade_din_seriale;
+    -- =============
+
+    -- ===== 8 =====
+    -- TODO: adauga ex 8 dupa fix
+    -- =============
+
+    -- ===== 9 =====
+    PROCEDURE actori_utilizator(porecla_utilizator UTILIZATOR.PORECLA%TYPE)
+    AS
+        v_idUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE;
+        v_firstIdUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE;
+        v_actorFound boolean := false;
+
+        -- distinct pentru ca un actor poate juca in mai multe filme
+        CURSOR getActori(idUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE) IS
+            select DISTINCT NUME
+            from ACTOR a
+            -- TODO: full outer joins ???
+            JOIN ROL_JUCAT rl on a.ACTOR_ID = rl.ACTOR_ID
+            JOIN FILM f on rl.FILM_ID = f.FILM_ID
+            JOIN SUBSCRIPTIE_FILM sf on f.FILM_ID = sf.FILM_ID
+            JOIN SUBSCRIPTIE s on sf.SUBSCRIPTIE_ID = s.SUBSCRIPTIE_ID
+            JOIN UTILIZATOR u on s.SUBSCRIPTIE_ID = u.SUBSCRIPTIE_ID
+            WHERE u.UTILIZATOR_ID = idUtilizator;
+
+        NO_ACTORS_FOUND EXCEPTION;
+
+    BEGIN
+        DBMS_OUTPUT.PUT_LINE('UTILIZATORUL: ' || porecla_utilizator);
+
+        -- ia id-ul utilizatorului cu porecla data | TOO_MANY_ROWS/NO_DATA_FOUND
+            -- alt bloc in caz ca exista doi sau mai multi utilizatori cu aceeasi porecla
+            -- daca se intampla asta il luam pe primul
+        BEGIN
+            select UTILIZATOR_ID
+            into v_idUtilizator
+            from UTILIZATOR
+            where lower(porecla_utilizator) = lower(porecla);
+        EXCEPTION
+            when TOO_MANY_ROWS then
+                SELECT UTILIZATOR_ID
+                INTO v_firstIdUtilizator
+                FROM (
+                    SELECT UTILIZATOR_ID
+                    FROM UTILIZATOR
+                    WHERE lower(porecla_utilizator) = lower(porecla)
+                    AND ROWNUM = 1
+                );
+                v_idUtilizator := v_firstIdUtilizator;
+        end;
+
+        -- daca trecem de toate verificarile afisam toti actorii utilizatorului
+        for i in getActori(v_idUtilizator) loop
+            v_actorFound := true;
+            DBMS_OUTPUT.PUT_LINE('  ' || i.NUME);
+            end loop;
+
+        -- verificam daca am gasit actori in cursor
+        if v_actorFound = false then RAISE NO_ACTORS_FOUND;
+        end if;
+    exception
+        when NO_DATA_FOUND then
+            DBMS_OUTPUT.PUT_LINE('  Nu au fost gasiti utilizatori cu porecla data');
+
+        when NO_ACTORS_FOUND then
+            DBMS_OUTPUT.PUT_LINE('  Acest utilizator nu se poate uita la niciun film cu actori');
+    end actori_utilizator;
+    -- =============
+
+END pachet_netflix;
+
+declare
+    v_lista_serialId serialId := serialId(1,3,6);
+begin
+    DBMS_OUTPUT.PUT_LINE('          FILM DIN SUBSCRIPTIE: ');
+
+    pachet_netflix.filme_din_subscriptie('ultimate');
+
+    DBMS_OUTPUT.PUT_LINE('      EPISOADE DIN SERIALE: ');
+
+    pachet_netflix.episoade_din_seriale(v_lista_serialId);
+
+    DBMS_OUTPUT.PUT_LINE('      ACTORI PENTRU UTILIZATOR: ');
+
+    pachet_netflix.actori_utilizator('skpha');
+end;
+/
 -- =================================================================
+
