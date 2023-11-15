@@ -147,6 +147,7 @@ end;
 --      ====== EX8 ======
 -- pentru o subscriptie data sa se ia serialul cu durata cea mai mare si
 -- sa se afiseze cati actori are
+-- TODO: daca schimbam ceva aici sa schimbam si la package
 CREATE OR REPLACE FUNCTION durata_subscriptie(tip_subscriptie subscriptie.tip%type) return Number
 AS
     type tipSubscriptie is table of SUBSCRIPTIE.TIP%type index by pls_integer;
@@ -278,7 +279,7 @@ end;
 
 -- Functioneaza corect
 declare
-    v_tip_subscriptie SUBSCRIPTIE.TIP%TYPE := 'ultimate';
+    v_tip_subscriptie SUBSCRIPTIE.TIP%TYPE := 'standard';
 begin
     DBMS_OUTPUT.PUT_LINE(durata_subscriptie(v_tip_subscriptie));
 end;
@@ -491,7 +492,7 @@ CREATE OR REPLACE PACKAGE pachet_netflix AS
     FUNCTION verifica_serial(v_serialId SERIAL.SERIAL_ID%TYPE, listaId serialId) RETURN NUMBER;
     PROCEDURE episoade_din_seriale(listaId serialId);
     -- 8
---     FUNCTION durata_subscriptie(tip_subscriptie subscriptie.tip%type) RETURN NUMBER;
+    FUNCTION durata_subscriptie(tip_subscriptie subscriptie.tip%type) RETURN NUMBER;
     -- 9
     PROCEDURE actori_utilizator(porecla_utilizator UTILIZATOR.PORECLA%TYPE);
 END pachet_netflix;
@@ -616,7 +617,116 @@ CREATE OR REPLACE PACKAGE BODY pachet_netflix AS
     -- =============
 
     -- ===== 8 =====
-    -- TODO: adauga ex 8 dupa fix
+    FUNCTION durata_subscriptie(tip_subscriptie subscriptie.tip%type) return Number
+    AS
+        type tipSubscriptie is table of SUBSCRIPTIE.TIP%type index by pls_integer;
+
+        v_subscriptie_id SUBSCRIPTIE.subscriptie_id%type;
+        v_tipuri_subscriptii tipSubscriptie;
+        v_hasBeenFound boolean := false;
+        v_maxSerialDuration number(4) := 0;
+        v_idSerialMaxDuration SERIAL.SERIAL_ID%type;
+        v_countActors number(3) := 0;
+        v_foundActors boolean := false;
+
+        -- cursor care ne ofera id-ul serialelor din subscriptia data ca parametru si duratat totala
+        -- aflata adunand durata fiecarui episod din acel serial
+        CURSOR durataEpisoade(id_subscriptie SUBSCRIPTIE.SUBSCRIPTIE_ID%type) IS
+            with durataEpisod as (select S2.SERIAL_ID, S2.DENUMIRE nume, sum(DURATA) suma
+                                  from EPISOD
+                                           join SERIAL S2 on S2.SERIAL_ID = EPISOD.SERIAL_ID
+                                  group by S2.SERIAL_ID, S2.DENUMIRE)
+            select ss.SERIAL_ID, de.suma
+            from SUBSCRIPTIE_SERIAL ss
+                     join durataEpisod de on de.SERIAL_ID = ss.SERIAL_ID
+            where ss.SUBSCRIPTIE_ID = v_subscriptie_id
+            order by de.suma desc;
+
+        -- cursor care ne da pentru fiecare serial cati actori are
+            -- sau e bine si asa?
+        CURSOR actors IS
+            select sa.SERIAL_ID id, count(*) nr
+            from ACTOR a
+                     Join SERIAL_ACTOR sa on a.ACTOR_ID = sa.ACTOR_ID
+            group by sa.serial_id;
+
+        type serial_info is table of durataEpisoade%rowtype index by pls_integer;
+        v_infoSeriale serial_info;
+
+        type actors_info is table of actors%rowtype index by pls_integer;
+        v_infoActors actors_info;
+
+        -- exceptii
+        NAME_NOT_FOUND EXCEPTION;
+        NO_ACTORS_FOUND EXCEPTION;
+    BEGIN
+        -- selectarea tututor tipurilor si verificarea ca tipul dat ca parametru sa existe
+        -- in aceasta lista
+        select lower(tip)
+        bulk collect into v_tipuri_subscriptii
+        from SUBSCRIPTIE;
+
+        for i in v_tipuri_subscriptii.first..v_tipuri_subscriptii.last loop
+            if lower(tip_subscriptie) = v_tipuri_subscriptii(i) then
+                v_hasBeenFound := true;
+            end if;
+        end loop;
+
+        if v_hasBeenFound = false then
+            RAISE NAME_NOT_FOUND;
+        end if;
+        -- ========================
+
+        -- daca avem un tip corect ii aflam id-ul
+        select SUBSCRIPTIE_ID
+        into v_subscriptie_id
+        from SUBSCRIPTIE
+        where lower(TIP) = lower(tip_subscriptie);
+        -- ===============
+
+        -- colectam informatia pentru seriale, adica (id, durata totala)
+        OPEN durataEpisoade(v_subscriptie_id);
+        FETCH durataEpisoade bulk collect into v_infoSeriale;
+        CLOSE durataEpisoade;
+
+        -- parcurgem serialele si luam id-ul celui cu cea mai mare durata
+        FOR i IN v_infoSeriale.FIRST..v_infoSeriale.LAST LOOP
+            if v_maxSerialDuration < v_infoSeriale(i).suma then
+                v_maxSerialDuration := v_infoSeriale(i).suma;
+                v_idSerialMaxDuration := v_infoSeriale(i).SERIAL_ID;
+            end if;
+        END LOOP;
+
+        -- colectam informatia pentru actori
+        OPEN actors;
+        FETCH actors bulk collect into v_infoActors;
+        CLOSE actors;
+
+        -- pentru fiecare serial vedem daca e egal cu cel aflat anterior
+        -- daca da ii dam actualizam countActors
+        for i in v_infoActors.first..v_infoActors.last loop
+            if v_infoActors(i).id = v_idSerialMaxDuration then
+                v_foundActors := true;
+                v_countActors := v_infoActors(i).nr;
+            end if;
+            end loop;
+
+        if v_foundActors = false then
+            RAISE NO_ACTORS_FOUND;
+        end if;
+
+        return v_countActors;
+
+    exception
+        when NAME_NOT_FOUND then
+            DBMS_OUTPUT.PUT_LINE('Nu exista tipul introdus');
+            return -1;
+
+        when NO_ACTORS_FOUND then
+            DBMS_OUTPUT.PUT_LINE('Nu am gasit actori pentru datele cerute');
+            return -1;
+
+    end durata_subscriptie;
     -- =============
 
     -- ===== 9 =====
@@ -630,7 +740,6 @@ CREATE OR REPLACE PACKAGE BODY pachet_netflix AS
         CURSOR getActori(idUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE) IS
             select DISTINCT NUME
             from ACTOR a
-            -- TODO: full outer joins ???
             JOIN ROL_JUCAT rl on a.ACTOR_ID = rl.ACTOR_ID
             JOIN FILM f on rl.FILM_ID = f.FILM_ID
             JOIN SUBSCRIPTIE_FILM sf on f.FILM_ID = sf.FILM_ID
@@ -688,15 +797,15 @@ declare
     v_lista_serialId serialId := serialId(1,3,6);
 begin
     DBMS_OUTPUT.PUT_LINE('          FILM DIN SUBSCRIPTIE: ');
-
     pachet_netflix.filme_din_subscriptie('ultimate');
 
     DBMS_OUTPUT.PUT_LINE('      EPISOADE DIN SERIALE: ');
-
     pachet_netflix.episoade_din_seriale(v_lista_serialId);
 
-    DBMS_OUTPUT.PUT_LINE('      ACTORI PENTRU UTILIZATOR: ');
+    DBMS_OUTPUT.PUT_LINE('      COUNT ACTORI SUBSCRIPTIE CU DURATA MAXIMA: ');
+    DBMS_OUTPUT.PUT_LINE(pachet_netflix.durata_subscriptie('premium'));
 
+    DBMS_OUTPUT.PUT_LINE('      ACTORI PENTRU UTILIZATOR: ');
     pachet_netflix.actori_utilizator('skpha');
 end;
 /
