@@ -68,7 +68,7 @@ end;
 -- =================================================================
 
 --      ====== EX7 ======
--- pentru fiecare Serial cu id-ul in (1,3,6) afisati numele tuturor
+-- pentru fiecare Serial cu id-ul intr-o lista afisati numele tuturor
 -- episoadelor care apartin
 create or replace type serialId as varray(10) of number(6);
 
@@ -358,14 +358,13 @@ declare
     type porecle is table of UTILIZATOR.porecla%type index by pls_integer;
     v_porecleUtilizatori porecle;
 begin
-    /*select porecla
-    bulk collect into v_porecleUtilizatori
-    from UTILIZATOR;
-    for i in v_porecleUtilizatori.first..v_porecleUtilizatori.last loop
-        actori_utilizator(v_porecleUtilizatori(i));
-        end loop;*/
     actori_utilizator('OnePiece');
 end;
+
+begin
+    actori_utilizator('Matoka26');
+end;
+/
 -- =================================================================
 
 --      ====== EX10 ======
