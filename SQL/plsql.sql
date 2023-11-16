@@ -147,7 +147,6 @@ end;
 --      ====== EX8 ======
 -- pentru o subscriptie data sa se ia serialul cu durata cea mai mare si
 -- sa se afiseze cati actori are
--- TODO: daca schimbam ceva aici sa schimbam si la package
 CREATE OR REPLACE FUNCTION durata_subscriptie(tip_subscriptie subscriptie.tip%type) return Number
 AS
     type tipSubscriptie is table of SUBSCRIPTIE.TIP%type index by pls_integer;
@@ -163,19 +162,15 @@ AS
     -- cursor care ne ofera id-ul serialelor din subscriptia data ca parametru si duratat totala
     -- aflata adunand durata fiecarui episod din acel serial
     CURSOR durataEpisoade(id_subscriptie SUBSCRIPTIE.SUBSCRIPTIE_ID%type) IS
-        with durataEpisod as (select S2.SERIAL_ID, S2.DENUMIRE nume, sum(DURATA) suma
-                              from EPISOD
-                                       join SERIAL S2 on S2.SERIAL_ID = EPISOD.SERIAL_ID
-                              group by S2.SERIAL_ID, S2.DENUMIRE)
-        select ss.SERIAL_ID, de.suma
-        from SUBSCRIPTIE_SERIAL ss
-                 join durataEpisod de on de.SERIAL_ID = ss.SERIAL_ID
-        where ss.SUBSCRIPTIE_ID = v_subscriptie_id
-        order by de.suma desc;
+        SELECT ss.SERIAL_ID, SUM(EP.DURATA) AS suma
+        FROM SUBSCRIPTIE_SERIAL ss
+        JOIN EPISOD EP ON ss.SERIAL_ID = EP.SERIAL_ID
+        JOIN SERIAL S ON ss.SERIAL_ID = S.SERIAL_ID
+        WHERE ss.SUBSCRIPTIE_ID = v_subscriptie_id
+        GROUP BY ss.SERIAL_ID
+        ORDER BY suma DESC;
 
     -- cursor care ne da pentru fiecare serial cati actori are
-    -- TODO: intrebare, era mai bine sa fac cu left/right join si sa verific daca count ul e 0
-        -- sau e bine si asa?
     CURSOR actors IS
         select sa.SERIAL_ID id, count(*) nr
         from ACTOR a
@@ -236,7 +231,6 @@ BEGIN
 
     -- pentru fiecare serial vedem daca e egal cu cel aflat anterior
     -- daca da ii dam actualizam countActors
-    -- TODO: intrebare, era mai bine sa fac cu left/right join si sa verific daca count ul e 0
     for i in v_infoActors.first..v_infoActors.last loop
         if v_infoActors(i).id = v_idSerialMaxDuration then
             v_foundActors := true;
@@ -298,7 +292,6 @@ AS
     CURSOR getActori(idUtilizator UTILIZATOR.UTILIZATOR_ID%TYPE) IS
         select DISTINCT NUME
         from ACTOR a
-        -- TODO: full outer joins ???
         JOIN ROL_JUCAT rl on a.ACTOR_ID = rl.ACTOR_ID
         JOIN FILM f on rl.FILM_ID = f.FILM_ID
         JOIN SUBSCRIPTIE_FILM sf on f.FILM_ID = sf.FILM_ID
@@ -443,11 +436,6 @@ BEGIN
     bulk collect into v_tipuriSubscriptii
     from SUBSCRIPTIE
     order by COST;
-
-    -- TODO: inserand in subscriptie film in trigger declansam iar trigger ul
-        -- idei:
-            -- coloana aditionala in SF sa vedem daca am inserat
-            -- tabela aditionala cu id uri de filme care au fost deja inserate
 
     -- parcurgem toate subscriptiile
     if VERIFICAFILM(:NEW.FILM_ID) = false then
@@ -656,17 +644,14 @@ CREATE OR REPLACE PACKAGE BODY pachet_netflix AS
 
         -- cursor care ne ofera id-ul serialelor din subscriptia data ca parametru si duratat totala
         -- aflata adunand durata fiecarui episod din acel serial
-        -- TODO: sa fac acest bloc select intr unul singur cu 2 join uri, nu 2 fiecare
         CURSOR durataEpisoade(id_subscriptie SUBSCRIPTIE.SUBSCRIPTIE_ID%type) IS
-            with durataEpisod as (select S2.SERIAL_ID, S2.DENUMIRE nume, sum(DURATA) suma
-                                  from EPISOD
-                                           join SERIAL S2 on S2.SERIAL_ID = EPISOD.SERIAL_ID
-                                  group by S2.SERIAL_ID, S2.DENUMIRE)
-            select ss.SERIAL_ID, de.suma
-            from SUBSCRIPTIE_SERIAL ss
-                     join durataEpisod de on de.SERIAL_ID = ss.SERIAL_ID
-            where ss.SUBSCRIPTIE_ID = v_subscriptie_id
-            order by de.suma desc;
+            SELECT ss.SERIAL_ID, SUM(EP.DURATA) AS suma
+            FROM SUBSCRIPTIE_SERIAL ss
+            JOIN EPISOD EP ON ss.SERIAL_ID = EP.SERIAL_ID
+            JOIN SERIAL S ON ss.SERIAL_ID = S.SERIAL_ID
+            WHERE ss.SUBSCRIPTIE_ID = v_subscriptie_id
+            GROUP BY ss.SERIAL_ID
+            ORDER BY suma DESC;
 
         -- cursor care ne da pentru fiecare serial cati actori are
             -- sau e bine si asa?
@@ -836,5 +821,3 @@ begin
 end;
 /
 -- =================================================================
-
--- TODO: documentatie

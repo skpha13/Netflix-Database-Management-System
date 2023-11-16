@@ -182,5 +182,3 @@ drop sequence incrementare_serial;
 
 commit;
 rollback;
-
--- TODO: change insert screenshots
