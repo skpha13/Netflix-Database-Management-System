@@ -820,3 +820,7 @@ begin
 end;
 /
 -- =================================================================
+
+-- TODO: in/out parameters
+-- TODO: ALTER PROCEDURE <name> COMPILE;
+-- TODO: liniar lists of default parameters for functions or procedures you can use <name> => <value>
