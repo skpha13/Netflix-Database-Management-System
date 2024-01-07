@@ -361,6 +361,7 @@ begin
     actori_utilizator('OnePiece');
 end;
 
+-- Functioneaza corect
 begin
     actori_utilizator('Matoka26');
 end;
@@ -399,7 +400,7 @@ delete from SUBSCRIPTIE where SUBSCRIPTIE_ID = 99999;
 --      ====== EX11 ======
 create or replace type subscriptii as varray(6) of number(6);
 
--- tabela pentru a retine daca filmul a fost deja inserate de trigger
+-- tabela pentru a retine daca filmul a fost deja inserat de trigger
 create table film_trigger (
     film_id number(6)
 );
@@ -819,6 +820,167 @@ begin
     pachet_netflix.actori_utilizator('skpha');
 end;
 /
+-- =================================================================
+
+--      ====== EX13 ======
+CREATE OR REPLACE PACKAGE pachet_utilizator AS
+    -- verifica daca un utilizator are un abonament valid (data de expirare a subscriptiei nu a expirat inca)
+    function verifica_subscriptie(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) RETURN BOOLEAN;
+    -- face insert-urile necesare pentru o plata a unui utilizator
+    procedure inserare_plata(v_utilizatorId UTILIZATOR.UTILIZATOR_ID%TYPE,
+                             v_plataId PLATA.PLATA_ID%TYPE,
+                             v_nume PLATA.NUME%TYPE,
+                             v_prenume PLATA.PRENUME%TYPE,
+                             V_cod PLATA.COD%TYPE,
+                             v_data_exp PLATA.DATA_EXP%TYPE,
+                             v_cvv PLATA.CVV%TYPE);
+    -- daca data curenta este aceeasi cu data cand utilizatorul si a facut contul ii oferim o luna gratis
+    procedure verifica_aniversare(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE);
+
+    -- TODO: 2 cursoare, unul filme_actori, altu seriale_actori
+    -- care rep. toate filmele/serialele si actorii la care se poate uita un user
+    -- 2 x 2 proceduri, una toate filmele, alta toti actorii
+    -- 1 procedura toate filmele si serialele
+    -- 1 procedura toti actorii
+    -- 1 procedura filme peste o anumita nota
+    -- 1 helper function verifica daca exista filme peste
+        -- o anumita nota si returneaza bool (posibil un varray)
+    -- TODO: ne mai gandim la views
+
+    CURSOR filme_actori(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) IS
+        SELECT f.DENUMIRE AS FILM, a.NUME AS ACTOR
+        FROM UTILIZATOR u
+        JOIN SUBSCRIPTIE s ON u.SUBSCRIPTIE_ID = s.SUBSCRIPTIE_ID
+        JOIN SUBSCRIPTIE_FILM sf ON s.SUBSCRIPTIE_ID = sf.SUBSCRIPTIE_ID
+        JOIN FILM f ON sf.FILM_ID = f.FILM_ID
+        LEFT JOIN ROL_JUCAT rl ON f.FILM_ID = rl.FILM_ID
+        LEFT JOIN ACTOR a ON rl.ACTOR_ID = a.ACTOR_ID
+        WHERE u.UTILIZATOR_ID = v_userId;
+
+    CURSOR seriale_actori(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) IS
+        SELECT ser.DENUMIRE AS SERIAL, a.NUME AS ACTOR
+        FROM UTILIZATOR u
+        JOIN SUBSCRIPTIE s ON u.SUBSCRIPTIE_ID = s.SUBSCRIPTIE_ID
+        JOIN SUBSCRIPTIE_SERIAL ss ON s.SUBSCRIPTIE_ID = ss.SUBSCRIPTIE_ID
+        JOIN SERIAL ser ON ss.SERIAL_ID = ser.SERIAL_ID
+        LEFT JOIN SERIAL_ACTOR sa ON ser.SERIAL_ID = sa.SERIAL_ID
+        LEFT JOIN ACTOR a ON sa.ACTOR_ID = a.ACTOR_ID
+        WHERE u.UTILIZATOR_ID = v_userId;
+
+    procedure toate_filmele(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE);
+    procedure toti_actorii(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE);
+END pachet_utilizator;
+
+CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
+    function verifica_subscriptie(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) RETURN BOOLEAN AS
+        v_expired boolean := false;
+        v_expiry_date UTILIZATOR.DATA_EXP_SUB%TYPE;
+    begin
+        select DATA_EXP_SUB
+        into v_expiry_date
+        from UTILIZATOR
+        where UTILIZATOR.UTILIZATOR_ID = v_userId;
+
+        if v_expiry_date < SYSDATE then
+            v_expired := true;
+        end if;
+
+        return v_expired;
+
+    EXCEPTION
+        WHEN NO_DATA_FOUND then
+            return false;
+
+    END verifica_subscriptie;
+
+    procedure inserare_plata(v_utilizatorId UTILIZATOR.UTILIZATOR_ID%TYPE,
+                             v_plataId PLATA.PLATA_ID%TYPE,
+                             v_nume PLATA.NUME%TYPE,
+                             v_prenume PLATA.PRENUME%TYPE,
+                             V_cod PLATA.COD%TYPE,
+                             v_data_exp PLATA.DATA_EXP%TYPE,
+                             v_cvv PLATA.CVV%TYPE)
+    AS
+
+    BEGIN
+        insert into PLATA values(v_plataId, v_nume, v_prenume, v_cod, v_data_exp, v_cvv);
+        insert into LISTA_CARDURI values(INCREMENTARE_LISTA_CARDURI.nextval, v_plataId, v_utilizatorId);
+    END inserare_plata;
+
+    procedure verifica_aniversare(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) AS
+        v_expiry_date UTILIZATOR.DATA_EXP_SUB%TYPE;
+        different_date exception;
+    BEGIN
+        select DATA_EXP_SUB
+        into v_expiry_date
+        from UTILIZATOR
+        where v_userId = UTILIZATOR.UTILIZATOR_ID;
+
+        if to_char(v_expiry_date,'DD/MM/YYYY') = to_char(SYSDATE,'DD/MM/YYYY') then
+            v_expiry_date := ADD_MONTHS(v_expiry_date, 1);
+
+            UPDATE UTILIZATOR
+            SET DATA_EXP_SUB = v_expiry_date
+            WHERE UTILIZATOR_ID = v_userId;
+        else
+            RAISE different_date;
+        end if;
+
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            DBMS_OUTPUT.PUT_LINE('Utilizatorul nu a fost gasit');
+
+        WHEN different_date then
+            DBMS_OUTPUT.PUT_LINE('Nu este eligibil pentru bonus');
+
+    END verifica_aniversare;
+
+    procedure toate_filmele(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) AS
+        TYPE row_filme is TABLE OF FILM.DENUMIRE%TYPE;
+        TYPE row_actori is TABLE OF ACTOR.NUME%TYPE;
+
+        v_filme row_filme;
+        v_actori row_actori;
+
+        v_filme_distincte row_filme;
+    BEGIN
+        OPEN filme_actori(v_userId);
+        Fetch filme_actori bulk collect into v_filme, v_actori;
+        CLOSE filme_actori;
+
+        -- pentru a obtine filmele distincte
+        v_filme_distincte := SET(v_filme);
+
+        for iterator in v_filme_distincte.FIRST..v_filme_distincte.LAST LOOP
+            DBMS_OUTPUT.PUT_LINE(v_filme_distincte(iterator));
+            end loop;
+    END toate_filmele;
+
+    procedure toti_actorii(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) AS
+        TYPE row_filme is TABLE OF FILM.DENUMIRE%TYPE;
+        TYPE row_actori is TABLE OF ACTOR.NUME%TYPE;
+
+        v_filme row_filme;
+        v_actori row_actori;
+
+        v_actori_distincti row_actori;
+    BEGIN
+        OPEN filme_actori(v_userId);
+        Fetch filme_actori bulk collect into v_filme, v_actori;
+        CLOSE filme_actori;
+
+        -- pentru a obtine filmele distincte
+        v_actori_distincti := SET(v_actori);
+
+        for iterator in v_actori_distincti.FIRST..v_actori_distincti.LAST LOOP
+            DBMS_OUTPUT.PUT_LINE(v_actori_distincti(iterator));
+            end loop;
+    END toti_actorii;
+END pachet_utilizator;
+
+begin
+    pachet_utilizator.TOTI_ACTORII(111);
+end;
 -- =================================================================
 
 -- TODO: in/out parameters
