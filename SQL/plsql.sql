@@ -823,6 +823,12 @@ end;
 -- =================================================================
 
 --      ====== EX13 ======
+-- TODO: documentatie, screenshots, etc.
+-- care rep. toate filmele/serialele si actorii la care se poate uita un user
+    -- [X] 2 proceduri, toate filmele/serialele
+    -- [X] 1 procedura toti actorii
+    -- [X] 1 function cu record pentru a obtine filmul cu nota maxima
+    -- [X] 1 functie filtrare, cu notamin notamax parametrii default restul bool uri (ordonare cresc sau nu)
 CREATE OR REPLACE PACKAGE pachet_utilizator AS
     -- verifica daca un utilizator are un abonament valid (data de expirare a subscriptiei nu a expirat inca)
     function verifica_subscriptie(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) RETURN BOOLEAN;
@@ -837,18 +843,10 @@ CREATE OR REPLACE PACKAGE pachet_utilizator AS
     -- daca data curenta este aceeasi cu data cand utilizatorul si a facut contul ii oferim o luna gratis
     procedure verifica_aniversare(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE);
 
-    -- TODO: 2 cursoare, unul filme_actori, altu seriale_actori
-    -- care rep. toate filmele/serialele si actorii la care se poate uita un user
-    -- 2 x 2 proceduri, una toate filmele, alta toti actorii
-    -- 1 procedura toate filmele si serialele
-    -- 1 procedura toti actorii
-    -- 1 procedura filme peste o anumita nota
-    -- 1 helper function verifica daca exista filme peste
-        -- o anumita nota si returneaza bool (posibil un varray)
-    -- TODO: ne mai gandim la views
-
+    -- 2 cursoare, unul care ia toate filmele si actorii la care se poate uita un user
+        -- si celalalt toate seriale si actorii respectivi la care se poate uita un user
     CURSOR filme_actori(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) IS
-        SELECT f.DENUMIRE AS FILM, a.NUME AS ACTOR
+        SELECT f.DENUMIRE AS FILM, a.NUME AS ACTOR, f.NOTA as NOTA
         FROM UTILIZATOR u
         JOIN SUBSCRIPTIE s ON u.SUBSCRIPTIE_ID = s.SUBSCRIPTIE_ID
         JOIN SUBSCRIPTIE_FILM sf ON s.SUBSCRIPTIE_ID = sf.SUBSCRIPTIE_ID
@@ -867,8 +865,26 @@ CREATE OR REPLACE PACKAGE pachet_utilizator AS
         LEFT JOIN ACTOR a ON sa.ACTOR_ID = a.ACTOR_ID
         WHERE u.UTILIZATOR_ID = v_userId;
 
+    -- ia toate filmele distincte din cursorul filme_actori
     procedure toate_filmele(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE);
+    -- ia toate serialele distincte din cursorul seriale_actori
+    procedure toate_serialele(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE);
+    -- ia toti actorii distincti din cursorul filme_actori reunit cu cursorul seriale_actori
     procedure toti_actorii(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE);
+
+    -- tip de record pentru a retine numele filmului si nota lui maxima
+    type film_record is record(nume film.denumire%type, nota film.nota%type);
+    -- functie de returnare a filmului cu nota maxima la care se poate uita un utilizator
+    function film_nota_maxima(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) return film_record;
+
+    -- filtrare filme pe care le poate vedea un utilizator
+    TYPE cursor_filtrare IS REF CURSOR RETURN FILM%ROWTYPE;
+    function filtreaza_filme(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE,
+                             v_nota_min FILM.NOTA%TYPE DEFAULT 0,
+                             v_nota_max FILM.NOTA%TYPE DEFAULT 10,
+                             v_crescator boolean DEFAULT false,
+                             v_descrescator boolean DEFAULT false)
+    return cursor_filtrare;
 END pachet_utilizator;
 
 CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
@@ -938,14 +954,16 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
     procedure toate_filmele(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) AS
         TYPE row_filme is TABLE OF FILM.DENUMIRE%TYPE;
         TYPE row_actori is TABLE OF ACTOR.NUME%TYPE;
+        type row_note is table of FILM.NOTA%TYPE;
 
         v_filme row_filme;
         v_actori row_actori;
+        v_note row_note;
 
         v_filme_distincte row_filme;
     BEGIN
         OPEN filme_actori(v_userId);
-        Fetch filme_actori bulk collect into v_filme, v_actori;
+        Fetch filme_actori bulk collect into v_filme, v_actori, v_note;
         CLOSE filme_actori;
 
         -- pentru a obtine filmele distincte
@@ -956,30 +974,170 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
             end loop;
     END toate_filmele;
 
+    procedure toate_serialele(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) AS
+        TYPE row_seriale is TABLE OF SERIAL.DENUMIRE%TYPE;
+        TYPE row_actori is TABLE OF ACTOR.NUME%TYPE;
+
+        v_seriale row_seriale;
+        v_actori row_actori;
+
+        v_seriale_distincte row_seriale;
+    BEGIN
+        OPEN seriale_actori(v_userId);
+        Fetch seriale_actori bulk collect into v_seriale, v_actori;
+        CLOSE seriale_actori;
+
+        -- pentru a obtine filmele distincte
+        v_seriale_distincte := SET(v_seriale);
+
+        for iterator in v_seriale_distincte.FIRST..v_seriale_distincte.LAST LOOP
+            DBMS_OUTPUT.PUT_LINE(v_seriale_distincte(iterator));
+            end loop;
+    END toate_serialele;
+
     procedure toti_actorii(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) AS
         TYPE row_filme is TABLE OF FILM.DENUMIRE%TYPE;
         TYPE row_actori is TABLE OF ACTOR.NUME%TYPE;
+        type row_note is table of FILM.NOTA%TYPE;
 
         v_filme row_filme;
-        v_actori row_actori;
+        v_actori_filme row_actori;
+        v_actori_seriale row_actori;
+        v_note row_note;
 
         v_actori_distincti row_actori;
     BEGIN
         OPEN filme_actori(v_userId);
-        Fetch filme_actori bulk collect into v_filme, v_actori;
+        Fetch filme_actori bulk collect into v_filme, v_actori_filme, v_note;
         CLOSE filme_actori;
 
-        -- pentru a obtine filmele distincte
-        v_actori_distincti := SET(v_actori);
+        OPEN seriale_actori(v_userId);
+        Fetch seriale_actori bulk collect into v_filme, v_actori_seriale;
+        CLOSE seriale_actori;
+
+        -- pentru a face o reuniune distincta intre actori
+        v_actori_distincti := v_actori_filme MULTISET UNION DISTINCT v_actori_seriale;
 
         for iterator in v_actori_distincti.FIRST..v_actori_distincti.LAST LOOP
             DBMS_OUTPUT.PUT_LINE(v_actori_distincti(iterator));
             end loop;
     END toti_actorii;
+
+    function film_nota_maxima(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) return film_record AS
+        v_film_max film_record;
+    BEGIN
+        v_film_max.nume := 'Nu exista film peste aceasta nota';
+        v_film_max.nota := 0;
+        for iterator in filme_actori(v_userId) LOOP
+            if v_film_max.nota < iterator.NOTA then
+                v_film_max.nota := iterator.NOTA;
+                v_film_max.nume := iterator.FILM;
+            end if;
+            end loop;
+
+        return v_film_max;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            DBMS_OUTPUT.PUT_LINE('Userul nu exista');
+            return NULL;
+    END film_nota_maxima;
+
+    function filtreaza_filme(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE,
+                             v_nota_min FILM.NOTA%TYPE DEFAULT 0,
+                             v_nota_max FILM.NOTA%TYPE DEFAULT 10,
+                             v_crescator boolean DEFAULT false,
+                             v_descrescator boolean DEFAULT false)
+    return cursor_filtrare AS
+        nota_min_invalida exception;
+        nota_max_invalida exception;
+        nota_relatie_invalida exception;
+        sortare_invalida exception;
+
+        v_cursor cursor_filtrare;
+        v_order_by varchar2(50);
+    BEGIN
+        if v_nota_min < 0 or v_nota_min > 10 then
+            raise nota_min_invalida;
+        end if;
+
+        if v_nota_max < 0 or v_nota_max > 10 then
+            raise nota_max_invalida;
+        end if;
+
+        if v_nota_min > v_nota_max then
+            raise nota_relatie_invalida;
+        end if;
+
+        if v_crescator = true and v_descrescator = true then
+            raise sortare_invalida;
+        end if;
+
+        if v_crescator = true then
+            v_order_by := 'ORDER BY FILM.NOTA ASC';
+        ELSIF v_descrescator = true then
+            v_order_by := 'ORDER BY FILM.NOTA DESC';
+        end if;
+
+        if v_crescator = false and v_descrescator = false then
+            OPEN v_cursor FOR
+                SELECT film.*
+                FROM film
+                JOIN SUBSCRIPTIE_FILM on film.FILM_ID = SUBSCRIPTIE_FILM.FILM_ID
+                JOIN SUBSCRIPTIE on SUBSCRIPTIE_FILM.SUBSCRIPTIE_ID = SUBSCRIPTIE.SUBSCRIPTIE_ID
+                JOIN UTILIZATOR on SUBSCRIPTIE.SUBSCRIPTIE_ID = UTILIZATOR.SUBSCRIPTIE_ID
+                WHERE UTILIZATOR_ID = v_userId and
+                      film.nota between v_nota_min and v_nota_max
+                || v_order_by;
+        end if;
+
+        return v_cursor;
+
+    EXCEPTION
+        WHEN nota_min_invalida then
+            DBMS_OUTPUT.PUT_LINE('Nota minima invalida');
+            return null;
+
+        WHEN nota_max_invalida then
+            DBMS_OUTPUT.PUT_LINE('Nota maxima invalida');
+            return null;
+
+        WHEN nota_relatie_invalida then
+            DBMS_OUTPUT.PUT_LINE('Nota minima este mai mare decat nota maxima');
+            return null;
+
+        WHEN sortare_invalida then
+            DBMS_OUTPUT.PUT_LINE('Nu se poate sorta si crescator si descrescator');
+            return null;
+
+        WHEN NO_DATA_FOUND then
+            DBMS_OUTPUT.PUT_LINE('Userul nu exista');
+            return null;
+
+    END filtreaza_filme;
 END pachet_utilizator;
 
+declare
+    -- tipul din pachet
+    v_film pachet_utilizator.film_record;
 begin
-    pachet_utilizator.TOTI_ACTORII(111);
+    v_film := pachet_utilizator.FILM_NOTA_MAXIMA(111);
+    DBMS_OUTPUT.PUT_LINE(v_film.nume || ' ' || v_film.nota);
+
+end;
+
+declare
+    v_film_cursor pachet_utilizator.cursor_filtrare;
+    v_film_row FILM%ROWTYPE;
+begin
+     v_film_cursor := pachet_utilizator.filtreaza_filme(111,11);
+
+
+    if v_film_cursor is not null then
+        for it in v_film_cursor loop
+            v_film_row := it;
+            DBMS_OUTPUT.PUT_LINE(v_film_row.FILM_ID || ' ' || v_film_row.DENUMIRE || ' ' || v_film_row.NOTA);
+            end loop;
+    end if;
 end;
 -- =================================================================
 
