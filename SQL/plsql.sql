@@ -388,7 +388,7 @@ end;
 /
 
 begin
-    insert into SUBSCRIPTIE(subscriptie_id, tip, cost) values (99999,'BaSiC',99);
+    insert into SUBSCRIPTIE(subscriptie_id, tip, cost) values (100000,'baSIC',99);
 end;
 /
 
@@ -822,8 +822,7 @@ end;
 /
 -- =================================================================
 
---      ====== EX13 ======
--- TODO: documentatie, screenshots, etc.
+--      ====== EX14 ======
 -- care rep. toate filmele/serialele si actorii la care se poate uita un user
     -- [X] 2 proceduri, toate filmele/serialele
     -- [X] 1 procedura toti actorii
@@ -1116,6 +1115,56 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
     END filtreaza_filme;
 END pachet_utilizator;
 
+-- NO_DATA_FOUND
+declare
+    v_result boolean;
+begin
+    -- pentru true ex user id: 111
+    v_result := pachet_utilizator.verifica_subscriptie(111111);
+    if v_result = true then
+        DBMS_OUTPUT.PUT_LINE('true');
+    else
+        DBMS_OUTPUT.PUT_LINE('false');
+    end if;
+end;
+
+begin
+    pachet_utilizator.inserare_plata(111,
+                                     1010,
+                                     'TEST',
+                                     'TEST',
+                                     123456789,
+                                     SYSDATE,
+                                     123);
+end;
+
+select * from PLATA;
+select *
+from LISTA_CARDURI
+where UTILIZATOR_ID = 111 and PLATA_ID=1010;
+
+-- ======== EXCEPTII ========
+begin
+    
+end;
+-- ==========================
+
+begin
+    pachet_utilizator.verifica_aniversare(111);
+end;
+
+begin
+    pachet_utilizator.toate_filmele(111);
+end;
+
+begin
+    pachet_utilizator.toate_serialele(111);
+end;
+
+begin
+    pachet_utilizator.toti_actorii(111);
+end;
+
 declare
     -- tipul din pachet
     v_film pachet_utilizator.film_record;
@@ -1130,7 +1179,6 @@ declare
     v_film_row FILM%ROWTYPE;
 begin
      v_film_cursor := pachet_utilizator.filtreaza_filme(111,11);
-
 
     if v_film_cursor is not null then
         for it in v_film_cursor loop
