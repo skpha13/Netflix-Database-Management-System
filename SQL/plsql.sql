@@ -73,7 +73,7 @@ end;
 create or replace type serialId as varray(10) of number(6);
 
 -- functie ajutatoare pentru a verifica daca un serial apartine unui varray de seriale
--- am facut asta ca primeam o eroare ciudata si asta mi s-a parut un workaound desutl de bun
+-- am facut asta ca primeam o eroare ciudata si asta mi s-a parut un workaound destul de bun
 create or replace function verifica_serial(v_serialId SERIAL.SERIAL_ID%TYPE, listaId serialId) RETURN NUMBER AS
     v_found number(1) := 0;
 begin
@@ -960,7 +960,19 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
         v_note row_note;
 
         v_filme_distincte row_filme;
+
+        v_id number := -1;
+        user_doesnt_exist exception;
     BEGIN
+        select UTILIZATOR_id
+        into v_id
+        from UTILIZATOR
+        where UTILIZATOR_ID = v_userId;
+
+        if v_id = -1 then
+            raise user_doesnt_exist;
+        end if;
+
         OPEN filme_actori(v_userId);
         Fetch filme_actori bulk collect into v_filme, v_actori, v_note;
         CLOSE filme_actori;
@@ -971,6 +983,12 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
         for iterator in v_filme_distincte.FIRST..v_filme_distincte.LAST LOOP
             DBMS_OUTPUT.PUT_LINE(v_filme_distincte(iterator));
             end loop;
+    EXCEPTION
+        WHEN NO_DATA_FOUND then
+            DBMS_OUTPUT.PUT_LINE('Userul nu exista');
+
+        WHEN USER_DOESNT_EXIST then
+            DBMS_OUTPUT.PUT_LINE('Userul nu exista');
     END toate_filmele;
 
     procedure toate_serialele(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) AS
@@ -981,7 +999,19 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
         v_actori row_actori;
 
         v_seriale_distincte row_seriale;
+
+        v_id number := -1;
+        user_doesnt_exist exception;
     BEGIN
+        select UTILIZATOR_id
+        into v_id
+        from UTILIZATOR
+        where UTILIZATOR_ID = v_userId;
+
+        if v_id = -1 then
+            raise user_doesnt_exist;
+        end if;
+
         OPEN seriale_actori(v_userId);
         Fetch seriale_actori bulk collect into v_seriale, v_actori;
         CLOSE seriale_actori;
@@ -992,6 +1022,13 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
         for iterator in v_seriale_distincte.FIRST..v_seriale_distincte.LAST LOOP
             DBMS_OUTPUT.PUT_LINE(v_seriale_distincte(iterator));
             end loop;
+
+    EXCEPTION
+        WHEN NO_DATA_FOUND then
+            DBMS_OUTPUT.PUT_LINE('Userul nu exista');
+
+        WHEN USER_DOESNT_EXIST then
+            DBMS_OUTPUT.PUT_LINE('Userul nu exista');
     END toate_serialele;
 
     procedure toti_actorii(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) AS
@@ -1005,7 +1042,19 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
         v_note row_note;
 
         v_actori_distincti row_actori;
+
+        v_id number := -1;
+        user_doesnt_exist exception;
     BEGIN
+        select UTILIZATOR_id
+        into v_id
+        from UTILIZATOR
+        where UTILIZATOR_ID = v_userId;
+
+        if v_id = -1 then
+            raise user_doesnt_exist;
+        end if;
+
         OPEN filme_actori(v_userId);
         Fetch filme_actori bulk collect into v_filme, v_actori_filme, v_note;
         CLOSE filme_actori;
@@ -1020,6 +1069,12 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
         for iterator in v_actori_distincti.FIRST..v_actori_distincti.LAST LOOP
             DBMS_OUTPUT.PUT_LINE(v_actori_distincti(iterator));
             end loop;
+    EXCEPTION
+        WHEN NO_DATA_FOUND then
+            DBMS_OUTPUT.PUT_LINE('Userul nu exista');
+
+        WHEN USER_DOESNT_EXIST then
+            DBMS_OUTPUT.PUT_LINE('Userul nu exista');
     END toti_actorii;
 
     function film_nota_maxima(v_userId UTILIZATOR.UTILIZATOR_ID%TYPE) return film_record AS
@@ -1115,18 +1170,35 @@ CREATE OR REPLACE PACKAGE BODY pachet_utilizator AS
     END filtreaza_filme;
 END pachet_utilizator;
 
--- NO_DATA_FOUND
+-- ======== EXCEPTII ========
 declare
     v_result boolean;
+    v_film_cursor pachet_utilizator.cursor_filtrare;
+    v_param_cresc_desc boolean := true;
 begin
+    -- ===== VERIFICA_SUBSCRIPTIE =====
     -- pentru true ex user id: 111
+    -- NO_DATA_FOUND pentru fiecare functioneaza la fel, un utilizator_id care nu exista
     v_result := pachet_utilizator.verifica_subscriptie(111111);
     if v_result = true then
         DBMS_OUTPUT.PUT_LINE('true');
     else
         DBMS_OUTPUT.PUT_LINE('false');
     end if;
+    -- ================================
+
+    -- ===== FILTREAZA FILM =====
+    v_film_cursor := pachet_utilizator.filtreaza_filme(111,-1,10);
+    v_film_cursor := pachet_utilizator.filtreaza_filme(111, 2,11);
+    v_film_cursor := pachet_utilizator.filtreaza_filme(111,7,3);
+    v_film_cursor := pachet_utilizator.filtreaza_filme(111,2,5,v_param_cresc_desc,v_param_cresc_desc);
+    -- ==========================
+
+    pachet_utilizator.toate_filmele(11111);
+    pachet_utilizator.toate_serialele(11111);
+    pachet_utilizator.toti_actorii(11111);
 end;
+-- ==========================
 
 begin
     pachet_utilizator.inserare_plata(111,
@@ -1143,42 +1215,20 @@ select *
 from LISTA_CARDURI
 where UTILIZATOR_ID = 111 and PLATA_ID=1010;
 
--- ======== EXCEPTII ========
-begin
-    
-end;
--- ==========================
-
-begin
-    pachet_utilizator.verifica_aniversare(111);
-end;
-
-begin
-    pachet_utilizator.toate_filmele(111);
-end;
-
-begin
-    pachet_utilizator.toate_serialele(111);
-end;
-
-begin
-    pachet_utilizator.toti_actorii(111);
-end;
-
-declare
-    -- tipul din pachet
-    v_film pachet_utilizator.film_record;
-begin
-    v_film := pachet_utilizator.FILM_NOTA_MAXIMA(111);
-    DBMS_OUTPUT.PUT_LINE(v_film.nume || ' ' || v_film.nota);
-
-end;
-
 declare
     v_film_cursor pachet_utilizator.cursor_filtrare;
     v_film_row FILM%ROWTYPE;
+    v_film pachet_utilizator.film_record;
 begin
-     v_film_cursor := pachet_utilizator.filtreaza_filme(111,11);
+    pachet_utilizator.verifica_aniversare(111);
+    pachet_utilizator.toate_filmele(111);
+    pachet_utilizator.toate_serialele(111);
+    pachet_utilizator.toti_actorii(111);
+
+    v_film := pachet_utilizator.FILM_NOTA_MAXIMA(111);
+    DBMS_OUTPUT.PUT_LINE(v_film.nume || ' ' || v_film.nota);
+
+    v_film_cursor := pachet_utilizator.filtreaza_filme(111,11);
 
     if v_film_cursor is not null then
         for it in v_film_cursor loop
