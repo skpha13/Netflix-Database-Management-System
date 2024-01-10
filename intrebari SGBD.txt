@@ -1,4 +1,0 @@
-- la subscritie-film/serial cum fac ca cea basic sa aiba 5 filme cea normala cele 5 de la basic + altele, etc
-- plata many to many + current plata id pentru a fi mai rapid
-- actor, film, rol -> daca e bine salariu cu timp ecran acolo
-- data expirare subscriptie, cum sa o fac?
